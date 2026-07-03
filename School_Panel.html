@@ -285,7 +285,7 @@
                                 class="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center active:scale-90 transition-transform shadow-sm"
                                 title="Verify Selected">
                                 <span class="material-symbols-outlined text-[20px]"
-                                    style="font-variation-settings: 'FILL' 1;">verified</span>
+                                    style="font-variation-settings: \'FILL\' 1;">verified</span>
                             </button>
                         </div>
                         <button id="btn-bulk-select-toggle" onclick="handleBulkToggleSelectAll()"
@@ -318,20 +318,20 @@
                         <button id="btn-verified" class="school-filter-btn shrink-0 flex items-center gap-1" style="display: none;"
                             onclick="setChipFilter('status', 'verified')" title="Verified"><span
                                 class="material-symbols-outlined text-[18px]"
-                                style="font-variation-settings: 'FILL' 1;">verified</span></button>
+                                style="font-variation-settings: \'FILL\' 1;">verified</span></button>
                         <button id="btn-unverified"
                             class="school-filter-btn pending-chip shrink-0 flex items-center gap-1" style="display: none;"
                             onclick="setChipFilter('status', 'unverified')" title="Unverified"><span
                                 class="material-symbols-outlined text-[18px]"
-                                style="font-variation-settings: 'FILL' 1;">unpublished</span></button>
+                                style="font-variation-settings: \'FILL\' 1;">unpublished</span></button>
                         <button id="btn-pending" class="school-filter-btn pending-chip shrink-0 flex items-center gap-1" style="display: none;"
                             onclick="setChipFilter('status', 'pending')" title="Pending (No Photo)"><span
                                 class="material-symbols-outlined text-[18px]"
-                                style="font-variation-settings: 'FILL' 1;">no_photography</span></button>
+                                style="font-variation-settings: \'FILL\' 1;">no_photography</span></button>
                         <button id="btn-recycle-bin" class="school-filter-btn pending-chip shrink-0 flex items-center gap-1" style="display: none;"
                             onclick="setChipFilter('status', 'recycleBin')" title="Recycle Bin"><span
                                 class="material-symbols-outlined text-[18px]"
-                                style="font-variation-settings: 'FILL' 1;">delete</span></button>
+                                style="font-variation-settings: \'FILL\' 1;">delete</span></button>
 
                         <!-- Sort Button -->
                         <div class="relative shrink-0 flex items-center ml-auto pl-1 pr-[2px]">
@@ -688,10 +688,10 @@
 
                     // Set default label for verified data before counts load
                     if (verBtn) {
-                        verBtn.innerHTML = `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: 'FILL' 1;">verified</span> VERIFIED DATA`;
+                        verBtn.innerHTML = `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: \'FILL\' 1;">verified</span> VERIFIED DATA`;
                     }
                     if (hVer) {
-                        hVer.innerHTML = `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span> VERIFIED DATA`;
+                        hVer.innerHTML = `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: \'FILL\' 1;">verified</span> VERIFIED DATA`;
                     }
 
                     [allBtn, unverBtn, penBtn, hAll, hUnver, hPen].forEach(el => {
@@ -717,10 +717,10 @@
 
                     // Reset verified button label to default school style
                     if (verBtn) {
-                        verBtn.innerHTML = `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+                        verBtn.innerHTML = `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: \'FILL\' 1;">verified</span>`;
                     }
                     if (hVer) {
-                        hVer.innerHTML = `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span>`;
+                        hVer.innerHTML = `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: \'FILL\' 1;">verified</span>`;
                     }
 
                     // Set active states
@@ -2058,7 +2058,7 @@
                         if (attach && attach.blob) {
                             // Convert to dataURL
                             const dataUrl = await blobToDataUrl(attach.blob);
-                            const payload = dataUrlToUploadPayload(dataUrl, (rec.fileName || (rec.studentName || 'photo') + '.jpg'), attach.blob.type || 'image/jpeg', (rec.id + '_' + (rec.studentName || 'photo')).replace(/\s+/g, '_'));
+                            const payload = dataUrlToUploadPayload(dataUrl, (rec.fileName || (rec.studentName || 'photo') + '.jpg'), attach.blob.type || 'image/jpeg', (rec.id + '_' + (rec.studentName || 'photo')).replace(/s+/g, '_'));
                             // uploadRecordDocument is expected on Apps Script to accept base64 payload
                             await new Promise((resolve, reject) => {
                                 serverCallSilent('uploadRecordDocument', [payload], (meta) => {
@@ -2124,7 +2124,12 @@
                         });
                         
                         const pendingLocal = (typeof db !== 'undefined' ? db : []).filter(r => r._pending || r._syncStatus === 'syncing' || r._syncStatus === 'pending');
-                        const serverFiltered = filterDeletedFromList([...serverDb]);
+                        let serverFiltered = filterDeletedFromList([...serverDb]);
+                        
+                        // Prevent unverified data from showing on all devices (only admin needs it, or device that created it)
+                        if (!currentUser || currentUser.userId !== 'admin') {
+                            serverFiltered = serverFiltered.filter(r => r && (r.verified === true || String(r.verified).toLowerCase() === 'true'));
+                        }
                         const mergedDb = serverFiltered.map(sRec => {
                             const lRec = pendingLocal.find(l => String(l.id) === String(sRec.id) || (l.oldId && String(l.oldId) === String(sRec.id)));
                             return lRec ? { ...sRec, ...lRec } : sRec;
@@ -2266,7 +2271,7 @@
             function encryptLocal(str) { return btoa(xorCipher(str)); }
             function decryptLocal(str) { try { return xorCipher(atob(str)); } catch(e) { return ''; } }
 
-            const DEFAULT_CONFIG = { name: 'Delhi Public School', code: 'DPS', about: 'ID Card Management Portal', systemAbout: 'ID Card Management Portal', logo: './idapplogo.png' };
+            const DEFAULT_CONFIG = { name: 'Advance Public School', code: 'APS', address: 'Gulabra, Chhindwara', contactPerson: 'Mr. Rehan Khan', mobile: '9074909045', email: 'APSGULABRA@GMAIL.COM', about: 'ID Card Management Portal', systemAbout: 'ID Card Management Portal', logo: './idapplogo.png' };
             let schoolConfig = loadSchoolConfig();
 
             function loadSchoolConfig() {
@@ -2488,7 +2493,38 @@
                 }
             }
 
+            let schoolDetailsTimer = null;
+            function toggleSchoolDetails(forceClose = false) {
+                const container = document.getElementById('school-details-expanded');
+                const chevron = document.getElementById('school-details-chevron');
+                if (!container || !chevron) return;
+                
+                if (schoolDetailsTimer) {
+                    clearTimeout(schoolDetailsTimer);
+                    schoolDetailsTimer = null;
+                }
+                
+                const isOpening = !forceClose && (container.style.maxHeight === '0px' || container.style.maxHeight === '');
+                
+                if (isOpening) {
+                    container.style.maxHeight = '200px';
+                    container.style.opacity = '1';
+                    container.style.marginTop = '12px';
+                    chevron.style.transform = 'rotate(180deg)';
+                    
+                    schoolDetailsTimer = setTimeout(() => {
+                        toggleSchoolDetails(true);
+                    }, 10000);
+                } else {
+                    container.style.maxHeight = '0px';
+                    container.style.opacity = '0';
+                    container.style.marginTop = '0px';
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+            }
+
             function closeSchoolConfig() {
+                if (typeof toggleSchoolDetails === 'function') toggleSchoolDetails(true);
                 const overlay = document.getElementById('school-config-overlay');
                 if (overlay) overlay.classList.add('hidden');
             }
@@ -2554,12 +2590,12 @@
             }
             function sanitizeFileNamePart(value) {
                 return String(value || '')
-                    .replace(/[\\/:*?"<>|#%]/g, ' ')
-                    .replace(/\s+/g, ' ')
+                    .replace(/[/:*?"<>|#%]/g, ' ')
+                    .replace(/s+/g, ' ')
                     .trim();
             }
             function getFileExtension(fileName, mimeType) {
-                const matched = String(fileName || '').match(/\.([a-zA-Z0-9]+)$/);
+                const matched = String(fileName || '').match(/.([a-zA-Z0-9]+)$/);
                 if (matched) return matched[1];
                 const typeMap = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
                 return typeMap[String(mimeType || '').toLowerCase()] || 'bin';
@@ -2610,12 +2646,12 @@
                 if (!s) return null;
 
                 // ISO date support: 2024-11-10T18:30:00.000Z
-                const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                const iso = s.match(/^(d{4})-(d{2})-(d{2})/);
                 if (iso) return { y: iso[1], m: iso[2], d: iso[3] };
 
-                s = s.replace(/[\/\.]/g, '-');
+                s = s.replace(/[/.]/g, '-');
                 const monthMap = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
-                const parts = s.split(/[\s-]+/).filter(Boolean);
+                const parts = s.split(/[s-]+/).filter(Boolean);
                 if (parts.length < 3) return null;
 
                 let d = '', m = '', y = '';
@@ -2683,7 +2719,7 @@
                 refreshBlankAgeBadge(value);
             }
             function handleDobInput(el) {
-                let v = el.value.replace(/\D/g, '');
+                let v = el.value.replace(/D/g, '');
                 if (v.length > 8) v = v.slice(0, 8);
                 let f = '';
                 if (v.length > 0) f += v.slice(0, 2);
@@ -2693,7 +2729,7 @@
                 syncBlankDobField(f);
             }
             function handleCustomDateInput(el, fieldId) {
-                let v = el.value.replace(/\D/g, '');
+                let v = el.value.replace(/D/g, '');
                 if (v.length > 8) v = v.slice(0, 8);
                 let f = '';
                 if (v.length > 0) f += v.slice(0, 2);
@@ -2836,7 +2872,7 @@
             }
             function toTitleCase(str) {
                 if (!str) return "";
-                return str.replace(/\w\S*/g, function (txt) {
+                return str.replace(/wS*/g, function (txt) {
                     return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
                 });
             }
@@ -2857,7 +2893,7 @@
                 const val = String(value || '').trim();
                 if (!val) return true;
                 const parts = val.split(',');
-                return parts.every(p => /^\d{10}$/.test(p.trim()));
+                return parts.every(p => /^d{10}$/.test(p.trim()));
             }
 
             // --- HOME PAGE & CHARTS ---
@@ -3571,7 +3607,7 @@
                     return {
                         'Sn': (() => {
                             const isRecVerified = (r.verified === true || String(r.verified).toLowerCase() === 'true' || r.verified === 'Completed');
-                            const si = (schoolConfig.name || "DPS").trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase() || "DPS";
+                            const si = (schoolConfig.name || "DPS").trim().split(/s+/).map(w=>w[0]).join('').toUpperCase() || "DPS";
                             if (isRecVerified) {
                                 const snVal = (r.sn && Number(r.sn) < 1000000000) ? r.sn : (index + 1);
                                 const year = new Date(r.createdAt || Date.now()).getFullYear().toString().slice(-2);
@@ -3657,6 +3693,7 @@
                     binSelectedRecords.add(String(id));
                     if (navigator.vibrate) navigator.vibrate(50);
                     renderRecycleBin();
+                    updateBulkHeader();
                 }
             }
 
@@ -3668,6 +3705,7 @@
                     binSelectedRecords.add(String(id));
                     if (navigator.vibrate) navigator.vibrate(50);
                     renderRecycleBin();
+                    updateBulkHeader();
                 }, 500);
             }
 
@@ -3697,6 +3735,10 @@
                 const sid = String(id);
                 if (binSelectedRecords.has(sid)) binSelectedRecords.delete(sid);
                 else binSelectedRecords.add(sid);
+                if (binSelectedRecords.size === 0 && blankRecordMode === 'recycleBin') {
+                    resetBulkSelection();
+                    return;
+                }
                 renderRecycleBin();
                 updateBulkHeader();
             }
@@ -3704,6 +3746,10 @@
             function toggleAllBinSelection() {
                 if (binSelectedRecords.size === bin.length) {
                     binSelectedRecords.clear();
+                    if (blankRecordMode === 'recycleBin') {
+                        resetBulkSelection();
+                        return;
+                    }
                 } else {
                     bin.forEach(x => binSelectedRecords.add(String(x.id)));
                 }
@@ -3712,9 +3758,11 @@
             }
 
             function bulkBinRestore() {
-                if (binSelectedRecords.size === 0) return;
-                showModal('confirm', 'Restore Selected?', 'Are you sure you want to restore ' + binSelectedRecords.size + ' records?', () => {
-                    const ids = Array.from(binSelectedRecords);
+                const isBinOverlay = blankRecordMode === 'recycleBin';
+                const targetRecords = isBinOverlay ? binSelectedRecords : selectedRecords;
+                if (targetRecords.size === 0) return;
+                showModal('confirm', 'Restore Selected?', 'Are you sure you want to restore ' + targetRecords.size + ' records?', () => {
+                    const ids = Array.from(targetRecords);
                     let count = 0;
                     ids.forEach(id => {
                         const idx = db.findIndex(r => String(r.id) === String(id));
@@ -3728,17 +3776,22 @@
                         }
                     });
                     showToast(count + ' records restored');
-                    binSelectedRecords.clear();
-                    bin = db.filter(r => r.isDeleted === true || String(r.isDeleted).toLowerCase() === 'true');
-                    renderRecycleBin();
-                    filterRecords();
+                    targetRecords.clear();
+                    if (isBinOverlay) {
+                        bin = db.filter(r => r.isDeleted === true || String(r.isDeleted).toLowerCase() === 'true');
+                        renderRecycleBin();
+                    } else {
+                        filterRecords();
+                    }
                     updateBulkHeader();
                 });
             }
 
             function bulkBinDelete() {
-                if (binSelectedRecords.size === 0) return;
-                const ids = Array.from(binSelectedRecords);
+                const isBinOverlay = blankRecordMode === 'recycleBin';
+                const targetRecords = isBinOverlay ? binSelectedRecords : selectedRecords;
+                if (targetRecords.size === 0) return;
+                const ids = Array.from(targetRecords);
                 let count = 0;
                 ids.forEach(id => {
                     db = db.filter(r => normalizeRecordId(r.id) !== normalizeRecordId(id));
@@ -3747,10 +3800,13 @@
                     count++;
                 });
                 showToast(count + ' records permanently deleted');
-                binSelectedRecords.clear();
-                bin = db.filter(r => r.isDeleted === true || String(r.isDeleted).toLowerCase() === 'true');
-                renderRecycleBin();
-                filterRecords();
+                targetRecords.clear();
+                if (isBinOverlay) {
+                    bin = db.filter(r => r.isDeleted === true || String(r.isDeleted).toLowerCase() === 'true');
+                    renderRecycleBin();
+                } else {
+                    filterRecords();
+                }
                 updateBulkHeader();
             }
 
@@ -3772,6 +3828,7 @@
                         </div>
                     `;
                 } else {
+                    let htmlStr = '';
                     bin.forEach((x, idx) => {
                         const deletedDate = x.deletedAt ? new Date(x.deletedAt).toLocaleDateString() : 'Unknown';
                         const initial = (x.studentName || 'S').charAt(0).toUpperCase();
@@ -3783,7 +3840,7 @@
                         if (idx === bin.length - 1) rowClasses.push('rounded-b-3xl', 'last:border-0');
                         if (idx !== bin.length - 1) rowClasses.push('last:border-0');
                         
-                        container.innerHTML += `
+                        htmlStr += `
                             <div class="${rowClasses.join(' ')}" style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: pan-y;" data-id="${escapeInlineId(x.id)}" oncontextmenu="event.preventDefault(); triggerBinSelection('${escapeInlineId(x.id)}'); return false;" ${binSelectedRecords.size > 0 ? `onclick="toggleBinSelection('${escapeInlineId(x.id)}')"` : ''}>
                                 <div class="flex flex-1 items-stretch min-w-0">
                                     <div class="w-16 bg-[var(--accent-soft)] flex-shrink-0 flex items-center justify-center border-r border-gray-50 relative overflow-hidden">
@@ -3816,6 +3873,7 @@
                             </div>
                         `;
                     });
+                    container.innerHTML = htmlStr;
                 }
             }
 
@@ -3899,7 +3957,7 @@
             }
 
             function escapeInlineId(id) {
-                return normalizeRecordId(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                return normalizeRecordId(id).replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "'");
             }
 
             function deleteRow(id) {
@@ -3938,6 +3996,7 @@
                         try { localStorage.removeItem('deleted_record_ids'); } catch(e){}
                         
                         try { if (window.idbClear) idbClear(IDB_STORE_RECORDS).catch(()=>{}); } catch(e){}
+                        if (typeof clearDraft === 'function') clearDraft();
                         document.body.removeChild(overlay);
                         showToast('All System Data Deleted Successfully');
                         renderHomeAnalysis();
@@ -4074,11 +4133,13 @@
                         if (a === 'PERM_DELETE') return 'bg-rose-200 text-rose-500';
                         return 'bg-slate-100 text-slate-700';
                     };
+                    let htmlStr = '';
                     log.slice().reverse().forEach(l => {
                         const title = `${l.gname || 'Record'}${l.bname ? ' & ' + l.bname : ''}`;
                         const userText = l.user ? `By: ${l.user}` : 'By: Admin';
-                        container.innerHTML += `<div class="flex items-center justify-between p-3 bg-slate-50 border rounded-xl"><div><div class="font-bold text-sm text-slate-700">${title}</div><div class="text-xs font-semibold text-slate-600">${userText}</div><div class="text-xs text-slate-500">${l.time}</div></div><span class="text-xs font-bold ${color(l.action)} px-2 py-1 rounded">${l.action}</span></div>`;
+                        htmlStr += `<div class="flex items-center justify-between p-3 bg-slate-50 border rounded-xl"><div><div class="font-bold text-sm text-slate-700">${title}</div><div class="text-xs font-semibold text-slate-600">${userText}</div><div class="text-xs text-slate-500">${l.time}</div></div><span class="text-xs font-bold ${color(l.action)} px-2 py-1 rounded">${l.action}</span></div>`;
                     });
+                    container.innerHTML = htmlStr;
                 }
                 document.getElementById('activity-modal').classList.remove('hidden');
                 lucide.createIcons();
@@ -4333,7 +4394,7 @@
                 if (parsed && parsed.y && parsed.m && parsed.d) {
                     return `${parsed.y}-${parsed.m}-${parsed.d}`;
                 }
-                return normalizeAutofillLookupValue(value).replace(/[\/\.\s]+/g, '-');
+                return normalizeAutofillLookupValue(value).replace(/[/.s]+/g, '-');
             }
             function findAutofillCandidate(studentNameVal, fatherNameVal, classVal, editId) {
                 const currentEditId = String(editId || '').trim();
@@ -4380,7 +4441,7 @@
                 lastDuplicatePromptKey = promptKey;
                 setTimeout(() => { if (lastDuplicatePromptKey === promptKey) lastDuplicatePromptKey = ''; }, 600);
                 const title = 'Existing Record Found';
-                const msg = `Student: ${existing.studentName || '-'}\nFather: ${existing.fatherName || '-'}\nClass: ${existing.sclass || '-'}\n\nYe record pehle se maujood hai.\nKya aap is data ko autofill karna chahte hain?`;
+                const msg = `Student: ${existing.studentName || '-'}nFather: ${existing.fatherName || '-'}nClass: ${existing.sclass || '-'}nnYe record pehle se maujood hai.nKya aap is data ko autofill karna chahte hain?`;
                 showModal('confirm', title, msg, () => { populateFormFromRecord(existing); showModal('success', 'Autofill Complete', 'Existing record form me load ho gaya.'); }, 'Yes, Autofill');
             }
             function hasDraftFormContent() { return getFormFieldMap().some(k => { const el = document.getElementById('in-' + k); return el && String(el.value || '').trim() !== ''; }) || !!pendingUploadedDocument || !!originalFileName; }
@@ -4526,7 +4587,7 @@
                     fetch(dataUrl)
                         .then(res => res.blob())
                         .then(blob => {
-                            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
+                            const compressedFile = new File([blob], file.name.replace(/.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
                             callback(compressedFile, dataUrl);
                         });
                 };
@@ -4886,7 +4947,7 @@
                         aadhar: getVal('aadhar'),
                         address: addressVal,
                         photoData: photoData ? photoData : (existing && !removeExistingDocument ? (existing.photoData || '') : ''),
-                        fileName: (photoData || pendingUploadedDocument) ? (finalId + '_' + n.replace(/\s+/g, '_') + '.jpg') : (existing ? (existing.fileName || '') : ''),
+                        fileName: (photoData || pendingUploadedDocument) ? (finalId + '_' + n.replace(/s+/g, '_') + '.jpg') : (existing ? (existing.fileName || '') : ''),
                         docFileId: (pendingUploadedDocument ? pendingUploadedDocument.fileId : (existing ? existing.docFileId : '')),
                         docUrl: (pendingUploadedDocument ? (pendingUploadedDocument.url || '') : (existing && !removeExistingDocument ? existing.docUrl : '')),
                         docMimeType: (pendingUploadedDocument ? pendingUploadedDocument.mimeType : (existing ? existing.docMimeType : currentFileType)),
@@ -5005,8 +5066,10 @@
                 const toggleIcon = document.getElementById('toggle-icon');
                 const badge = document.getElementById('selected-count-badge');
 
-                const isRecycleBinMode = activeStatusFilter === 'recycleBin';
-                const count = isRecycleBinMode ? binSelectedRecords.size : selectedRecords.size;
+                const isBinOverlay = blankRecordMode === 'recycleBin';
+                const isBinInline = activeStatusFilter === 'recycleBin';
+                const isRecycleBinMode = isBinOverlay || isBinInline;
+                const count = isBinOverlay ? binSelectedRecords.size : selectedRecords.size;
                 const canShowBulkActions = count > 0 && (isRecycleBinMode || activeStatusFilter === 'unverified' || activeStatusFilter === 'pending' || (currentUser && currentUser.userId === 'admin' && (activeStatusFilter === 'verified' || activeStatusFilter === 'all')));
                 const filterRow = document.getElementById('class-filter-row');
                 if (filterRow && isRecycleBinMode) {
@@ -5022,8 +5085,8 @@
                     if (bulkContainer) bulkContainer.classList.add('flex');
                     if (bulkSelectToggle) bulkSelectToggle.classList.remove('hidden');
                     if (bulkSelectCount) bulkSelectCount.innerText = count;
-                    if (bulkSelectIcon) bulkSelectIcon.className = `fa-solid ${count === (isRecycleBinMode ? bin.length : currentRenderedRecords.length) ? 'fa-square-check' : 'fa-square'} text-sm text-white`;
-                    if (bulkSelectToggle) bulkSelectToggle.onclick = isRecycleBinMode ? toggleAllBinSelection : bulkToggleSelectAll;
+                    if (bulkSelectIcon) bulkSelectIcon.className = `fa-solid ${count === (isBinOverlay ? bin.length : currentRenderedRecords.length) ? 'fa-square-check' : 'fa-square'} text-sm text-white`;
+                    if (bulkSelectToggle) bulkSelectToggle.onclick = isBinOverlay ? toggleAllBinSelection : bulkToggleSelectAll;
 
                     const verifyBtn = document.getElementById('btn-bulk-verify');
                     const restoreBtn = document.getElementById('btn-bulk-restore');
@@ -5108,9 +5171,14 @@
             function resetBulkSelection() {
                 syncSelectedRecordsSection();
                 selectedRecords.clear();
-                if (activeStatusFilter === 'recycleBin') {
-                    binSelectedRecords.clear();
-                    renderRecycleBin();
+                binSelectedRecords.clear();
+                if (activeStatusFilter === 'recycleBin' || blankRecordMode === 'recycleBin') {
+                    setBlankRecordMode('none');
+                    if (activeStatusFilter === 'recycleBin') {
+                        setChipFilter('status', 'all');
+                    } else {
+                        renderCurrentRecordsPage();
+                    }
                 } else {
                     renderCurrentRecordsPage();
                 }
@@ -5118,7 +5186,7 @@
             }
 
             function handleBulkToggleSelectAll() {
-                if (activeStatusFilter === 'recycleBin') {
+                if (blankRecordMode === 'recycleBin') {
                     toggleAllBinSelection();
                 } else {
                     bulkToggleSelectAll();
@@ -5141,6 +5209,10 @@
                 const isEmptyNow = selectedRecords.size === 0;
 
                 if (wasEmpty !== isEmptyNow) {
+                    if (isEmptyNow && activeStatusFilter === 'recycleBin') {
+                        resetBulkSelection();
+                        return;
+                    }
                     renderCurrentRecordsPage();
                 } else {
                     // Visual Update for the checkbox
@@ -5167,6 +5239,10 @@
 
                 if (selectedRecords.size === visibleUnverified.length && visibleUnverified.length > 0) {
                     selectedRecords.clear();
+                    if (activeStatusFilter === 'recycleBin') {
+                        resetBulkSelection();
+                        return;
+                    }
                 } else {
                     visibleUnverified.forEach(r => selectedRecords.add(String(r.id)));
                 }
@@ -5294,8 +5370,8 @@
                     for (let i = 0; i < recordsToExport.length; i++) {
                         const rec = recordsToExport[i];
                         
-                        const safeClass = (rec.sclass || 'Unknown_Class').replace(/[^a-zA-Z0-9\s]/g, '_').trim();
-                        const safeName = (rec.studentName || 'Unknown_Name').replace(/[^a-zA-Z0-9\s]/g, '_').trim();
+                        const safeClass = (rec.sclass || 'Unknown_Class').replace(/[^a-zA-Z0-9s]/g, '_').trim();
+                        const safeName = (rec.studentName || 'Unknown_Name').replace(/[^a-zA-Z0-9s]/g, '_').trim();
                         const baseFilename = `${safeClass}_${safeName}`;
                         
                         let qrFileName = "";
@@ -5312,7 +5388,7 @@
                                     }
                                     qrLines.push(`${label}: ${rec[f] || "-"}`);
                                 });
-                                let qrVal = qrLines.join('\n');
+                                let qrVal = qrLines.join('n');
                                 const qr = new QRious({
                                     value: qrVal,
                                     size: 300,
@@ -5690,7 +5766,7 @@
 
             function renderDataInfoRow(stats, isTotal = false) {
                 const rowClass = `${isTotal ? 'bg-emerald-50 text-emerald-800' : 'bg-white text-slate-700'} ${isTotal ? '' : 'cursor-pointer hover:bg-slate-50'}`.trim();
-                const onClick = isTotal ? '' : ` onclick="filterByClassFromDataInfo('${String(stats.label).replace(/'/g, "\\'")}')"`;
+                const onClick = isTotal ? '' : ` onclick="filterByClassFromDataInfo('${String(stats.label).replace(/'/g, "'")}')"`;
                 return `
                     <tr class="${rowClass}"${onClick}>
                         <td class="sticky left-0 ${isTotal ? 'bg-emerald-50' : 'bg-white'} px-3 py-3 text-left text-[11px] font-black uppercase border-b border-slate-100 whitespace-nowrap">${stats.label}</td>
@@ -5850,30 +5926,30 @@
                         } else if (isReturned) {
                             previewVerifiedIcons = `
                             <div class="flex items-center gap-1.5 shrink-0 pl-3">
-                                <span class="material-symbols-outlined text-[16px] text-amber-500" style="font-variation-settings: 'FILL' 1;" title="Returned">settings_backup_restore</span>
+                                <span class="material-symbols-outlined text-[16px] text-amber-500" style="font-variation-settings: \'FILL\' 1;" title="Returned">settings_backup_restore</span>
                             </div>`;
                         } else {
                             let syncIconHtml = '';
                             if (hasDoc || isPreviewVerified) {
                                 if (previewRecord && previewRecord._serverSaved) {
-                                    syncIconHtml = `<span class="material-symbols-outlined status-drive-icon" style="font-variation-settings: 'FILL' 0;" title="Saved to Server">cloud_done</span>`;
+                                    syncIconHtml = `<span class="material-symbols-outlined status-drive-icon" style="font-variation-settings: \'FILL\' 0;" title="Saved to Server">cloud_done</span>`;
                                 } else if (previewSyncStatus === 'syncing') {
-                                    syncIconHtml = `<span class="material-symbols-outlined status-drive-icon syncing" style="font-variation-settings: 'FILL' 0;" title="Uploading">cloud_upload</span>`;
+                                    syncIconHtml = `<span class="material-symbols-outlined status-drive-icon syncing" style="font-variation-settings: \'FILL\' 0;" title="Uploading">cloud_upload</span>`;
                                 }
                             }
                             
                             let statusIconHtml = '';
                             if (isPreviewVerified) {
-                                statusIconHtml = `<span class="material-symbols-outlined text-[16px] text-emerald-600" style="font-variation-settings: 'FILL' 1;" title="Verified">verified</span>`;
+                                statusIconHtml = `<span class="material-symbols-outlined text-[16px] text-emerald-600" style="font-variation-settings: \'FILL\' 1;" title="Verified">verified</span>`;
                             } else if (hasDoc) {
-                                statusIconHtml = `<span class="material-symbols-outlined text-[16px] text-amber-500" style="font-variation-settings: 'FILL' 1;" title="Unverified">unpublished</span>`;
+                                statusIconHtml = `<span class="material-symbols-outlined text-[16px] text-amber-500" style="font-variation-settings: \'FILL\' 1;" title="Unverified">unpublished</span>`;
                             } else {
-                                statusIconHtml = `<span class="material-symbols-outlined text-[16px] text-rose-500" style="font-variation-settings: 'FILL' 1;" title="No Photo">no_photography</span>`;
+                                statusIconHtml = `<span class="material-symbols-outlined text-[16px] text-rose-500" style="font-variation-settings: \'FILL\' 1;" title="No Photo">no_photography</span>`;
                             }
 
                             let restoreIconHtml = '';
                             if (rec.isRestored) {
-                                restoreIconHtml = `<span class="material-symbols-outlined text-[16px] text-indigo-500" style="font-variation-settings: 'FILL' 1;" title="Restored">settings_backup_restore</span>`;
+                                restoreIconHtml = `<span class="material-symbols-outlined text-[16px] text-indigo-500" style="font-variation-settings: \'FILL\' 1;" title="Restored">settings_backup_restore</span>`;
                             }
                             
                             previewVerifiedIcons = `
@@ -5978,7 +6054,7 @@
                                     <i class="fa-solid fa-hashtag text-[#05996c] text-[10px]"></i>
                                     <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">SN: ${ (() => {
                                         const isRecVerified = (rec.verified === true || String(rec.verified).toLowerCase() === 'true' || rec.verified === 'Completed');
-                                        const si = (schoolConfig.name || "DPS").trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase() || "DPS";
+                                        const si = (schoolConfig.name || "DPS").trim().split(/s+/).map(w=>w[0]).join('').toUpperCase() || "DPS";
                                         if (isRecVerified) {
                                             const snVal = (rec.sn && Number(rec.sn) < 1000000000) ? rec.sn : '0';
                                             const year = new Date(rec.createdAt || Date.now()).getFullYear().toString().slice(-2);
@@ -6018,7 +6094,7 @@
                                 <i class="fa-solid fa-trash-can text-sm"></i>
                             </button>
                             ${hasDoc ? `<button onclick="verifyFromPreview();" class="w-10 h-10 shrink-0 rounded-full bg-blue-600 text-white flex items-center justify-center active:scale-90 transition-transform shadow-sm" title="Verify Record">
-                                <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+                                <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: \'FILL\' 1;">verified</span>
                             </button>` : ''}
                              <button 
                                  onclick="saveAndNew()" 
@@ -6053,46 +6129,54 @@
 
                     if (blankRecordMode === 'settings') {
                         t.innerHTML = `
-                <div class="p-6 bg-white rounded-3xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300 system-card">
-                    <div class="flex items-stretch gap-4 text-left pb-2">
-                        <div onclick="openImagePreviewModal(schoolConfig ? schoolConfig.logo : null)" class="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center border-2 border-emerald-100 shadow-sm relative overflow-hidden shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform" title="Tap to Zoom Logo">
-                            ${schoolConfig.logo ? `<img src="${schoolConfig.logo}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-school-flag text-5xl text-emerald-600"></i>`}
-                        </div>
-                        <div class="flex flex-col justify-between py-1 min-w-0 flex-1 h-24">
-                            <!-- School Name (slightly larger) -->
-                            <h3 class="text-[15px] font-black text-slate-800 truncate leading-tight">${schoolConfig.name || 'School Name'}</h3>
-                            
-                            <!-- Address (immediately under School Name, same text size) -->
-                            <div class="text-[10px] text-slate-700 font-extrabold leading-normal truncate">
-                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(schoolConfig.address || '')}" target="_blank" class="hover:underline hover:text-emerald-700 transition-colors">
-                                    <i class="fa-solid fa-location-dot text-emerald-600 mr-1 text-[9px]"></i>${schoolConfig.address || 'Address not set'}
-                                </a>
+                <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    
+                    <!-- School Header Card -->
+                    <div class="p-6 bg-white rounded-3xl system-card">
+                        <!-- Header: Centered Logo and School Name -->
+                        <div class="flex flex-col items-center justify-center gap-3 text-center cursor-pointer relative group" onclick="toggleSchoolDetails()">
+                            <div onclick="event.stopPropagation(); openImagePreviewModal(schoolConfig ? schoolConfig.logo : null)" class="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center border-2 border-emerald-100 shadow-sm relative overflow-hidden shrink-0 hover:scale-105 active:scale-95 transition-transform" title="Tap to Zoom Logo">
+                                ${schoolConfig.logo ? `<img src="${schoolConfig.logo}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-school-flag text-5xl text-emerald-600"></i>`}
                             </div>
-
-                            <!-- Contact Person & Mobile (inline, same text size) -->
-                            <div class="text-[10px] text-slate-700 font-extrabold leading-normal truncate flex items-center gap-1.5">
-                                <span class="truncate"><i class="fa-solid fa-user-tie text-emerald-600 mr-1 text-[9px]"></i>${schoolConfig.contactPerson || 'Contact not set'}</span>
-                                <span class="text-slate-400">•</span>
-                                <span class="text-slate-800 font-black tracking-wider uppercase shrink-0">
+                            <div class="flex flex-col items-center gap-1">
+                                <h3 class="text-[17px] font-black text-slate-800 leading-tight">${schoolConfig.name || 'School Name'}</h3>
+                                <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 opacity-70 group-hover:opacity-100 transition-opacity flex items-center gap-1">Tap for details <i id="school-details-chevron" class="fa-solid fa-chevron-down text-[8px] transition-transform duration-300 text-emerald-600"></i></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Expandable Details Section -->
+                        <div id="school-details-expanded" class="flex flex-col gap-2 bg-slate-50 px-4 rounded-2xl border border-slate-100 transition-all duration-300 overflow-hidden" style="max-height: 0px; opacity: 0; margin-top: 0px;">
+                            <div class="py-4 space-y-2">
+                                <!-- Address -->
+                                <div class="text-[11px] text-slate-700 font-extrabold leading-normal text-center">
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(schoolConfig.address || '')}" target="_blank" class="hover:underline hover:text-emerald-700 transition-colors">
+                                        <i class="fa-solid fa-location-dot text-emerald-600 mr-1 text-[10px]"></i>${schoolConfig.address || 'Address not set'}
+                                    </a>
+                                </div>
+                                <!-- Contact Person -->
+                                <div class="text-[11px] text-slate-700 font-extrabold leading-normal text-center">
+                                    <i class="fa-solid fa-user-tie text-emerald-600 mr-1 text-[10px]"></i>${schoolConfig.contactPerson || 'Contact not set'}
+                                </div>
+                                <!-- Mobile No -->
+                                <div class="text-[11px] text-slate-800 font-black tracking-wider uppercase text-center">
                                     ${schoolConfig.mobile ? `
                                         <a href="tel:${schoolConfig.mobile}" class="hover:underline hover:text-emerald-700 transition-colors">
-                                            <i class="fa-solid fa-phone text-emerald-600 mr-1 text-[9px]"></i>${schoolConfig.mobile}
+                                            <i class="fa-solid fa-phone text-emerald-600 mr-1 text-[10px]"></i>${schoolConfig.mobile}
                                         </a>
                                     ` : `
-                                        <i class="fa-solid fa-phone text-emerald-600 mr-1 text-[9px]"></i>No Mobile
+                                        <i class="fa-solid fa-phone text-emerald-600 mr-1 text-[10px]"></i>No Mobile
                                     `}
-                                </span>
-                            </div>
-
-                            <!-- Email (same text size) -->
-                            <div class="text-[10px] text-slate-800 font-black tracking-wider uppercase truncate">
-                                ${schoolConfig.email ? `
-                                    <a href="mailto:${schoolConfig.email}" class="hover:underline hover:text-emerald-700 transition-colors">
-                                        <i class="fa-solid fa-envelope text-emerald-600 mr-1 text-[9px]"></i>${schoolConfig.email}
-                                    </a>
-                                ` : `
-                                    <i class="fa-solid fa-envelope text-emerald-600 mr-1 text-[9px]"></i>No Email
-                                `}
+                                </div>
+                                <!-- Email -->
+                                <div class="text-[11px] text-slate-800 font-black tracking-wider uppercase text-center">
+                                    ${schoolConfig.email ? `
+                                        <a href="mailto:${schoolConfig.email}" class="hover:underline hover:text-emerald-700 transition-colors">
+                                            <i class="fa-solid fa-envelope text-emerald-600 mr-1 text-[10px]"></i>${schoolConfig.email}
+                                        </a>
+                                    ` : `
+                                        <i class="fa-solid fa-envelope text-emerald-600 mr-1 text-[10px]"></i>No Email
+                                    `}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6197,29 +6281,29 @@
                                     <p class="text-[9px] font-bold text-slate-450 uppercase tracking-widest">Contact Info</p>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-[auto_max-content_auto_1fr] gap-x-2 gap-y-2 text-xs text-slate-600 pt-1 font-semibold pl-1 items-start">
-                                <div class="mt-[2px] text-slate-400 flex justify-center w-[14px]"><i class="fa-solid fa-phone"></i></div>
-                                <div>Mobile No</div>
-                                <div>:</div>
-                                <div><a href="tel:${schoolConfig.adminMobile || '7999565002'}" class="text-indigo-600 hover:underline">${schoolConfig.adminMobile || '7999565002'}</a></div>
-                                
-                                <div class="mt-[2px] text-slate-400 flex justify-center w-[14px]"><i class="fa-solid fa-envelope"></i></div>
-                                <div>Email ID</div>
-                                <div>:</div>
-                                <div class="break-all"><a href="mailto:${(schoolConfig.adminEmail || 'identify.jvd@gmail.com').toLowerCase()}" class="text-indigo-600 hover:underline lowercase">${(schoolConfig.adminEmail || 'identify.jvd@gmail.com').toLowerCase()}</a></div>
-                                
-                                <div class="mt-[2px] text-slate-400 flex justify-center w-[14px]"><i class="fa-solid fa-location-dot"></i></div>
-                                <div>Address</div>
-                                <div>:</div>
-                                <div class="leading-relaxed">
-                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(schoolConfig.adminAddress || 'Anjuman Complex Chhindwara')}" target="_blank" class="text-indigo-600 hover:underline">${sanitizeHTML(schoolConfig.adminAddress || 'Anjuman Complex Chhindwara')}</a>
+                            <div class="flex flex-col gap-2 text-xs text-slate-600 pt-1 font-semibold pl-1">
+                                <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="text-slate-400"><i class="fa-solid fa-phone"></i></div>
+                                        <div><a href="tel:${schoolConfig.adminMobile || '7999565002'}" class="text-indigo-600 hover:underline">${schoolConfig.adminMobile || '7999565002'}</a></div>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="text-slate-400"><i class="fa-solid fa-envelope"></i></div>
+                                        <div class="break-all"><a href="mailto:${(schoolConfig.adminEmail || 'identify.jvd@gmail.com').toLowerCase()}" class="text-indigo-600 hover:underline lowercase">${(schoolConfig.adminEmail || 'identify.jvd@gmail.com').toLowerCase()}</a></div>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-1.5 mt-0.5">
+                                    <div class="text-slate-400 mt-[2px]"><i class="fa-solid fa-location-dot"></i></div>
+                                    <div class="leading-relaxed">
+                                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(schoolConfig.adminAddress || 'Anjuman Complex Chhindwara')}" target="_blank" class="text-indigo-600 hover:underline">${sanitizeHTML(schoolConfig.adminAddress || 'Anjuman Complex Chhindwara')}</a>
+                                    </div>
                                 </div>
                             </div>
                             <div class="pt-3 border-t border-slate-200 flex flex-wrap gap-2 items-center justify-center">
                                 <a href="tel:${schoolConfig.adminMobile || '7999565002'}" class="w-9 h-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-all" title="Call">
                                     <i class="fa-solid fa-phone"></i>
                                 </a>
-                                <a href="${schoolConfig.adminWhatsapp ? `https://wa.me/91${String(schoolConfig.adminWhatsapp).replace(/\D/g,'')}` : (schoolConfig.adminMobile ? `https://wa.me/91${String(schoolConfig.adminMobile).replace(/\D/g,'')}` : 'https://wa.me/917999565002')}" target="_blank" rel="noopener noreferrer" class="w-9 h-9 rounded-full bg-green-100 text-green-700 flex items-center justify-center hover:bg-green-200 transition-all" title="WhatsApp">
+                                <a href="${schoolConfig.adminWhatsapp ? `https://wa.me/91${String(schoolConfig.adminWhatsapp).replace(/D/g,'')}` : (schoolConfig.adminMobile ? `https://wa.me/91${String(schoolConfig.adminMobile).replace(/D/g,'')}` : 'https://wa.me/917999565002')}" target="_blank" rel="noopener noreferrer" class="w-9 h-9 rounded-full bg-green-100 text-green-700 flex items-center justify-center hover:bg-green-200 transition-all" title="WhatsApp">
                                     <i class="fa-brands fa-whatsapp"></i>
                                 </a>
                                 <a href="mailto:${(schoolConfig.adminEmail || 'identify.jvd@gmail.com').toLowerCase()}" class="w-9 h-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-all" title="Email">
@@ -6791,9 +6875,9 @@
                     let syncIconStatusHtml = '';
                     if (!x.isDeleted && (hasDoc || isRecVerified || isReturned)) {
                         if (x._serverSaved) {
-                            syncIconStatusHtml = `<span class="material-symbols-outlined status-drive-icon" style="font-variation-settings: 'FILL' 0;" title="Saved to Server">cloud_done</span>`;
+                            syncIconStatusHtml = `<span class="material-symbols-outlined status-drive-icon" style="font-variation-settings: \'FILL\' 0;" title="Saved to Server">cloud_done</span>`;
                         } else if (syncStatus === 'syncing') {
-                            syncIconStatusHtml = `<span class="material-symbols-outlined status-drive-icon syncing" style="font-variation-settings: 'FILL' 0;" title="Uploading">cloud_upload</span>`;
+                            syncIconStatusHtml = `<span class="material-symbols-outlined status-drive-icon syncing" style="font-variation-settings: \'FILL\' 0;" title="Uploading">cloud_upload</span>`;
                         }
                     }
 
@@ -6827,7 +6911,7 @@
                     ` : `
                         <div class="flex items-center gap-2">
                             <button onclick="event.stopPropagation(); restoreRecord('${x.id}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Restore">
-                                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">settings_backup_restore</span>
+                                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: \'FILL\' 1;">settings_backup_restore</span>
                             </button>
                             <button onclick="binLpClick('${x.id}', event)" class="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Delete Permanently">
                                 <i class="fa-solid fa-trash-can text-[14px]"></i>
@@ -7008,7 +7092,7 @@
                     ['btn-verified', 'home-btn-verified'].forEach(id => {
                         const el = document.getElementById(id);
                         if (el) {
-                            el.innerHTML = `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: 'FILL' 1;">verified</span> VERIFIED DATA (${verifiedCount})`;
+                            el.innerHTML = `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: \'FILL\' 1;">verified</span> VERIFIED DATA (${verifiedCount})`;
                             if (activeStatusFilter === 'verified' || activeStatusFilter === 'all') el.classList.add('active'); else el.classList.remove('active');
                         }
                     });
@@ -7026,16 +7110,16 @@
                     
                     // Records Tab Buttons
                     updateEl('btn-all-data', `All Data (${total})`);
-                    updateEl('btn-verified', `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: 'FILL' 1;">verified</span> (${verifiedCount})`);
-                    updateEl('btn-unverified', `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: 'FILL' 1;">unpublished</span> (${unverifiedCount})`);
-                    updateEl('btn-pending', `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: 'FILL' 1;">no_photography</span> (${pendingCount})`);
-                    updateEl('btn-recycle-bin', `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: 'FILL' 1;">delete</span> (${binTotal})`);
+                    updateEl('btn-verified', `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: \'FILL\' 1;">verified</span> (${verifiedCount})`);
+                    updateEl('btn-unverified', `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: \'FILL\' 1;">unpublished</span> (${unverifiedCount})`);
+                    updateEl('btn-pending', `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: \'FILL\' 1;">no_photography</span> (${pendingCount})`);
+                    updateEl('btn-recycle-bin', `<span class="material-symbols-outlined text-[16px] -mt-0.5" style="font-variation-settings: \'FILL\' 1;">delete</span> (${binTotal})`);
 
                     // Home Tab Buttons
                     updateEl('home-btn-all', `All Data (${total})`);
-                    updateEl('home-btn-verified', `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">verified</span> (${verifiedCount})`);
-                    updateEl('home-btn-unverified', `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">unpublished</span> (${unverifiedCount})`);
-                    updateEl('home-btn-pending', `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">no_photography</span> (${pendingCount})`);
+                    updateEl('home-btn-verified', `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: \'FILL\' 1;">verified</span> (${verifiedCount})`);
+                    updateEl('home-btn-unverified', `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: \'FILL\' 1;">unpublished</span> (${unverifiedCount})`);
+                    updateEl('home-btn-pending', `<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: \'FILL\' 1;">no_photography</span> (${pendingCount})`);
                 }
 
                 const totalCountEl = document.getElementById('chip-total-count');
@@ -7062,7 +7146,7 @@
             function getClassFilterLabel(value) {
                 if (value === 'all') return 'All Class';
                 if (value === 'Nursery' || value === 'KG-1' || value === 'KG-2') return `Class: ${value}`;
-                if (/^Class\s+/i.test(value)) return `Class: ${value.replace(/^Class\s+/i, '')}`;
+                if (/^Classs+/i.test(value)) return `Class: ${value.replace(/^Classs+/i, '')}`;
                 return `Class: ${value}`;
             }
 
@@ -7118,7 +7202,7 @@
                 );
 
                 classMenu.innerHTML = items.map(item => `
-        <div class="menu-item" onclick="setFilterValue('class', '${String(item.value).replace(/'/g, "\\'")}', '${String(getClassFilterLabel(item.value)).replace(/'/g, "\\'")}')">
+        <div class="menu-item" onclick="setFilterValue('class', '${String(item.value).replace(/'/g, "'")}', '${String(getClassFilterLabel(item.value)).replace(/'/g, "'")}')">
             <span class="menu-item-label">${item.label}</span>
             <span class="menu-item-count">${item.count}</span>
         </div>`).join('');
@@ -7194,31 +7278,31 @@
                 }
                 const w = window.open();
                 const isImage = docSource.startsWith('data:image');
-                const html = '<!DOCTYPE html>\n' +
-'<html lang="en">\n' +
-'<head>\n' +
-'<meta charset="UTF-8">\n' +
-'<title>Document Preview</title>\n' +
-'<style>\n' +
-'*{box-sizing:border-box;margin:0;padding:0}\n' +
-'html,body{width:100%;height:100%;background:#0f172a;margin:0;overflow:hidden}\n' +
-'.page{width:100vw;height:100vh;margin:0;display:flex;align-items:center;justify-content:center;background:#0f172a}\n' +
-'.page img,.page iframe{width:100vw;height:100vh;border:0;object-fit:contain}\n' +
-'.print-btn{position:fixed;top:16px;right:16px;z-index:10;background:#064e3b;color:#fff;border:none;border-radius:10px;padding:10px 14px;font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,0.15)}\n' +
-'.print-btn svg{width:16px;height:16px;stroke:currentColor}\n' +
-'.print-btn:hover{background:#043728}\n' +
-'@media print{.print-btn{display:none!important} @page{size:auto;margin:0} html,body,.page{width:100%;height:100%;background:white}}\n' +
-'</style' + '>\n' +
-'</head' + '>\n' +
-'<body' + '>\n' +
-'<button class="print-btn" onclick="window.print()">\n' +
-'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\n' +
-'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/>\n' +
-'</svg>\n' +
-'Print\n' +
-'</button>\n' +
-'<div class="page">' + (isImage ? '<img src="' + docSource + '">' : '<ifr' + 'ame src="' + docSource + '"></ifr' + 'ame>') + '</div>\n' +
-'</body' + '>\n' +
+                const html = '<!DOCTYPE html>n' +
+'<html lang="en">n' +
+'<head>n' +
+'<meta charset="UTF-8">n' +
+'<title>Document Preview</title>n' +
+'<style>n' +
+'*{box-sizing:border-box;margin:0;padding:0}n' +
+'html,body{width:100%;height:100%;background:#0f172a;margin:0;overflow:hidden}n' +
+'.page{width:100vw;height:100vh;margin:0;display:flex;align-items:center;justify-content:center;background:#0f172a}n' +
+'.page img,.page iframe{width:100vw;height:100vh;border:0;object-fit:contain}n' +
+'.print-btn{position:fixed;top:16px;right:16px;z-index:10;background:#064e3b;color:#fff;border:none;border-radius:10px;padding:10px 14px;font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,0.15)}n' +
+'.print-btn svg{width:16px;height:16px;stroke:currentColor}n' +
+'.print-btn:hover{background:#043728}n' +
+'@media print{.print-btn{display:none!important} @page{size:auto;margin:0} html,body,.page{width:100%;height:100%;background:white}}n' +
+'</style' + '>n' +
+'</head' + '>n' +
+'<body' + '>n' +
+'<button class="print-btn" onclick="window.print()">n' +
+'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">n' +
+'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/>n' +
+'</svg>n' +
+'Printn' +
+'</button>n' +
+'<div class="page">' + (isImage ? '<img src="' + docSource + '">' : '<ifr' + 'ame src="' + docSource + '"></ifr' + 'ame>') + '</div>n' +
+'</body' + '>n' +
 '</html' + '>';
                 w.document.write(html);
                 w.document.close();
@@ -8238,37 +8322,43 @@
                     class="absolute top-5 right-6 w-9 h-9 rounded-full bg-slate-100/50 hover:bg-rose-50 hover:text-rose-500 flex items-center justify-center text-slate-500 transition active:scale-90 z-20">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
-                <div class="px-8 pt-10 pb-6 flex items-stretch gap-4 text-left">
-                    <div id="settings-logo-container" onclick="openImagePreviewModal(schoolConfig ? schoolConfig.logo : null)"
-                        class="w-20 h-20 rounded-3xl bg-emerald-50 flex items-center justify-center border-2 border-emerald-100 overflow-hidden shrink-0 shadow-sm cursor-pointer hover:scale-105 active:scale-95 transition-transform" title="Tap to Zoom Logo">
-                        <i class="fa-solid fa-school-flag text-3xl text-emerald-600"></i>
+                <div class="px-8 pt-10 pb-6 flex flex-col items-center gap-2 text-center relative">
+                    <div id="settings-logo-container" onclick="openImagePreviewModal(schoolConfig && schoolConfig.logo ? schoolConfig.logo : null)"
+                        class="w-24 h-24 rounded-3xl bg-emerald-50 flex items-center justify-center border-2 border-emerald-100 overflow-hidden shrink-0 shadow-sm cursor-pointer hover:scale-105 active:scale-95 transition-transform" title="Tap to Zoom Logo">
+                        <i class="fa-solid fa-school-flag text-4xl text-emerald-600"></i>
                     </div>
-                    <div class="flex flex-col justify-between py-0.5 min-w-0 flex-1 h-20">
-                        <!-- School Name (larger) -->
-                        <h3 id="settings-school-name-display" class="text-sm font-black text-slate-800 truncate leading-tight">School Name</h3>
-                        
-                        <!-- Address (immediately under School Name, same text size) -->
-                        <div class="text-[9.5px] text-slate-700 font-extrabold leading-tight truncate">
+                    
+                    <!-- School Name Button -->
+                    <button type="button" onclick="toggleSchoolDetails()" class="mt-2 flex flex-col items-center group active:scale-95 transition-transform max-w-full">
+                        <h3 id="settings-school-name-display" class="text-base font-black text-slate-800 leading-tight">School Name</h3>
+                        <div class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1 opacity-70 group-hover:opacity-100 transition-opacity flex items-center gap-1">Tap for details <i class="fa-solid fa-chevron-down text-[8px] transition-transform duration-300" id="school-details-chevron"></i></div>
+                    </button>
+                    
+                    <!-- Expandable Details -->
+                    <div id="school-details-expanded" class="w-full flex flex-col items-center gap-2 overflow-hidden transition-all duration-300" style="max-height: 0px; opacity: 0; margin-top: 0px;">
+                        <!-- Address -->
+                        <div class="text-[10px] text-slate-600 font-bold leading-relaxed text-center max-w-[280px]">
                             <a id="settings-school-address-link" href="#" target="_blank" class="hover:underline hover:text-emerald-700 transition-colors">
-                                <i class="fa-solid fa-location-dot text-emerald-600 mr-1 text-[8.5px]"></i><span id="settings-school-address-display">--</span>
+                                <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i><span id="settings-school-address-display">--</span>
                             </a>
                         </div>
-
-                        <!-- Contact & Mobile (inline, same text size) -->
-                        <div class="text-[9.5px] text-slate-700 font-extrabold leading-tight truncate flex items-center gap-1.5">
-                            <span class="truncate"><i class="fa-solid fa-user-tie text-emerald-600 mr-1 text-[8.5px]"></i><span id="settings-school-contact-display">--</span></span>
-                            <span class="text-slate-400">•</span>
-                            <span class="text-slate-800 font-black tracking-wider uppercase shrink-0">
-                                <a id="settings-school-mobile-link" href="#" class="hover:underline hover:text-emerald-700 transition-colors">
-                                    <i class="fa-solid fa-phone text-emerald-600 mr-1 text-[8.5px]"></i><span id="settings-school-mobile-display">--</span>
-                                </a>
-                            </span>
+                        
+                        <!-- Contact Person -->
+                        <div class="text-[10px] text-slate-700 font-extrabold flex items-center gap-1">
+                            <i class="fa-solid fa-user-tie text-emerald-600 mr-1 text-[9px]"></i><span id="settings-school-contact-display">--</span>
                         </div>
-
-                        <!-- Email (same text size) -->
-                        <div class="text-[9.5px] text-slate-800 font-black tracking-wider uppercase truncate">
+                        
+                        <!-- Mobile No -->
+                        <div class="text-[10px] text-slate-800 font-black tracking-wider uppercase">
+                            <a id="settings-school-mobile-link" href="#" class="hover:underline hover:text-emerald-700 transition-colors">
+                                <i class="fa-solid fa-phone text-emerald-600 mr-1 text-[9px]"></i><span id="settings-school-mobile-display">--</span>
+                            </a>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="text-[10px] text-slate-800 font-black tracking-wider uppercase">
                             <a id="settings-school-email-link" href="#" class="hover:underline hover:text-emerald-700 transition-colors">
-                                <i class="fa-solid fa-envelope text-emerald-600 mr-1 text-[8.5px]"></i><span id="settings-school-email-display">--</span>
+                                <i class="fa-solid fa-envelope text-emerald-600 mr-1 text-[9px]"></i><span id="settings-school-email-display">--</span>
                             </a>
                         </div>
                     </div>
@@ -9608,7 +9698,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('login-overlay');
             if(overlay) {
-                const loginCard = overlay.querySelector('.relative.w-full.max-w-\\[340px\\]');
+                const loginCard = overlay.querySelector('.relative.w-full.max-w-[340px]');
                 const inputs = overlay.querySelectorAll('input');
                 
                 if(loginCard && inputs.length > 0) {

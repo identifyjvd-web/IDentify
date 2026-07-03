@@ -207,11 +207,26 @@ async function handleFirebaseCall(fn, args, onSuccess, onFailure) {
         } else if (fn === 'deleteAllRecords') {
             const q = query(collection(window.db, "records"));
             const querySnapshot = await getDocs(q);
-            const promises = [];
-            querySnapshot.forEach((document) => {
-                promises.push(deleteDoc(doc(window.db, "records", document.id)));
-            });
-            await Promise.all(promises);
+            const docs = querySnapshot.docs;
+            const chunkSize = 100;
+            for (let i = 0; i < docs.length; i += chunkSize) {
+                const chunk = docs.slice(i, i + chunkSize);
+                await Promise.all(chunk.map(d => deleteDoc(d.ref)));
+            }
+
+            // Also clear activityLogs
+            try {
+                const logsQ = query(collection(window.db, "activityLogs"));
+                const logsSnapshot = await getDocs(logsQ);
+                const logDocs = logsSnapshot.docs;
+                for (let i = 0; i < logDocs.length; i += chunkSize) {
+                    const chunk = logDocs.slice(i, i + chunkSize);
+                    await Promise.all(chunk.map(d => deleteDoc(d.ref)));
+                }
+            } catch (e) {
+                console.warn('Could not clear activityLogs', e);
+            }
+
             if (onSuccess) onSuccess(true);
         } else if (fn === 'saveFormFields') {
             const data = args[0];
