@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity Portal</title>
+    
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f8fafd;
+            overflow: hidden;
+        }
+
+        .splash-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform: translateY(-10vh);
+        }
+
+        .splash-logo {
+            width: 180px;
+            height: 180px;
+            object-fit: contain;
+            mix-blend-mode: multiply;
+            filter: drop-shadow(0 20px 13px rgba(0, 0, 0, 0.03)) drop-shadow(0 8px 5px rgba(0, 0, 0, 0.08));
+        }
+
+        .loading-dots {
+            position: absolute;
+            bottom: 4rem;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dot {
+            height: 1.25rem;
+            width: 1.25rem;
+            background-color: #05996c;
+            border-radius: 9999px;
+            animation: bounce 1s infinite;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.3s; }
+        .dot:nth-child(2) { animation-delay: -0.15s; }
+        .dot:nth-child(3) { animation-delay: 0s; }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(-25%);
+                animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+            }
+            50% {
+                transform: none;
+                animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+            }
+        }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyBMZ3LUNSQubKjanv4MNyDNsvKwPmsKQY8",
+            authDomain: "id3files.firebaseapp.com",
+            projectId: "id3files",
+            storageBucket: "id3files.firebasestorage.app",
+            messagingSenderId: "839961631978",
+            appId: "1:839961631978:web:4300cbe1fcb1461878cb93"
+        };
+
+        const progressBar = document.getElementById('progress-bar');
+        
+        function setProgress(val) {
+            if (progressBar) progressBar.style.width = val + '%';
+        }
+
+        // Simulate progress while Firebase initializes
+        let simulatedProgress = 0;
+        const progressInterval = setInterval(() => {
+            if (simulatedProgress < 85) {
+                simulatedProgress += Math.floor(Math.random() * 15) + 5;
+                if (simulatedProgress > 85) simulatedProgress = 85;
+                setProgress(simulatedProgress);
+            }
+        }, 150);
+
+        try {
+            window.firebaseLoadedInIndex = true;
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+
+            onAuthStateChanged(auth, (user) => {
+                clearInterval(progressInterval);
+                setProgress(100);
+                
+                setTimeout(() => {
+                    if (user) {
+                        if (user.email && (user.email.toLowerCase().includes('admin') || user.email.toLowerCase() === 'identify.jvd@gmail.com')) {
+                            window.location.replace('Admin_Panel.html');
+                        } else {
+                            window.location.replace('School_Panel.html');
+                        }
+                    } else {
+                        window.location.replace('Login_Panel.html');
+                    }
+                }, 200);
+            });
+        } catch (e) {
+            console.error("Routing error:", e);
+            clearInterval(progressInterval);
+            setProgress(100);
+            setTimeout(() => {
+                window.location.replace('Login_Panel.html');
+            }, 200);
+        }
+    </script>
+    <script>
+        // Fallback: If Firebase fails to load after 3 seconds, route to login.
+        setTimeout(() => {
+            if (!window.firebaseLoadedInIndex) {
+                console.warn("Firebase took too long to load or failed. Redirecting to Login...");
+                const bar = document.getElementById('progress-bar');
+                if (bar) bar.style.width = '100%';
+                setTimeout(() => {
+                    window.location.replace('Login_Panel.html');
+                }, 200);
+            }
+        }, 3000);
+    </script>
+</head>
+
+<body>
+    <div class="splash-container">
+        <img src="./idapplogo.png" class="splash-logo" alt="Logo">
+        
+        <div class="loading-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+    <!-- Service Worker registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.log('Service Worker registration failed:', err);
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

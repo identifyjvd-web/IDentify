@@ -1,0 +1,38 @@
+{
+  "name": "IDentify App",
+  "short_name": "IDentify",
+  "description": "Student Data Collection and Verification",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "./icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "School Panel",
+      "short_name": "School",
+      "description": "Open School Data Entry Panel",
+      "url": "./School_Panel.html"
+    },
+    {
+      "name": "Admin Panel",
+      "short_name": "Admin",
+      "description": "Open Admin Dashboard",
+      "url": "./Admin_Panel.html"
+    }
+  ]
+}

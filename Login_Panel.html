@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/png" href="./fevicon.png">
+    <link rel="apple-touch-icon" href="./idapplogo.png">
+    <link rel="manifest" href="manifest.json">
+    <title id="page-title">Login - IDentify</title>
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <link rel="stylesheet" href="global.css">
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+        const firebaseConfig = {
+    apiKey: "AIzaSyBMZ3LUNSQubKjanv4MNyDNsvKwPmsKQY8",
+    authDomain: "id3files.firebaseapp.com",
+    projectId: "id3files",
+    storageBucket: "id3files.firebasestorage.app",
+    messagingSenderId: "839961631978",
+    appId: "1:839961631978:web:4300cbe1fcb1461878cb93"
+};
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            window.db = getFirestore(app);
+            window.auth = getAuth(app);
+
+            window.firebaseAPI = {
+                initializeApp, getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, signInAnonymously, onAuthStateChanged,
+                db: window.db, auth: window.auth, firebaseConfig, doc, getDoc, setDoc
+            };
+            console.log("Firebase initialized successfully on Login Panel.");
+        } catch (e) {
+            console.error("Firebase initialization error:", e);
+        }
+    </script>
+</head>
+
+<body class="flex flex-col h-[100dvh]">
+
+    <div id="initial-splash-screen" class="fixed inset-0 z-[99999] bg-[#f8fafd] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="flex flex-col items-center justify-center drop-shadow-2xl -mt-96">
+            <img src="./idapplogo.png" class="w-[180px] h-[180px] object-contain mix-blend-multiply">
+        </div>
+        <!-- 3 Loading Dots in Logo Green Color (#05996c) -->
+        <div class="absolute bottom-16 flex space-x-3 justify-center items-center">
+            <div class="h-5 w-5 bg-[#05996c] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div class="h-5 w-5 bg-[#05996c] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div class="h-5 w-5 bg-[#05996c] rounded-full animate-bounce"></div>
+        </div>
+    </div>
+
+    <!-- Login Overlay: always visible on this page -->
+    <div id="login-overlay" class="fixed inset-0 z-[11000] flex items-center justify-center bg-[#f0f4f8] p-4 overflow-y-auto">
+        <div id="login-card" class="relative w-full max-w-[340px] rounded-[28px] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.13)] overflow-hidden border border-slate-100 mt-2">
+            
+            <!-- Punch Hole Cutout (Lanyard Slot) -->
+            <div class="absolute top-2.5 left-1/2 -translate-x-1/2 w-12 h-3 bg-[#f0f4f8] rounded-full shadow-[inset_0_2px_5px_rgba(0,0,0,0.08)] flex items-center justify-center z-20 border border-slate-100/50">
+                <div class="w-8 h-1 bg-slate-200/80 rounded-full"></div>
+            </div>
+
+            <div class="px-6 pt-9 pb-7">
+                <!-- Icon Badge -->
+                <div class="flex flex-col items-center mb-5">
+                    <div class="w-[70px] h-[70px] rounded-full border-[3px] border-emerald-500 flex items-center justify-center bg-white shadow-sm mb-3">
+                        <div id="login-logo-container" class="w-[52px] h-[52px] rounded-full bg-emerald-50 flex items-center justify-center overflow-hidden">
+                            <i data-lucide="id-card" class="w-7 h-7 text-emerald-600"></i>
+                        </div>
+                    </div>
+                    <h2 id="login-school-name" class="text-[17px] font-extrabold text-slate-800 text-center leading-snug">Delhi Public School</h2>
+                    <p class="mt-1 text-[12px] font-semibold text-emerald-700">ID Card Management Software</p>
+                </div>
+
+                <!-- Fields -->
+                <div class="mt-2">
+                    <!-- Normal Login Fields -->
+                    <div id="login-normal-fields" class="space-y-4">
+                        <div>
+                            <label class="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
+                                <i data-lucide="mail" class="w-3.5 h-3.5 text-emerald-500"></i> Email Address
+                            </label>
+                            <input id="login-user-id" type="email" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-medium outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition" placeholder="Enter Email Address">
+                        </div>
+                        <div>
+                            <label class="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
+                                <i data-lucide="lock-keyhole" class="w-3.5 h-3.5 text-emerald-500"></i> Password
+                            </label>
+                            <div class="relative">
+                                <input id="login-password" type="password" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 pr-12 text-sm font-medium outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition" placeholder="Enter password">
+                                <button id="login-password-toggle" type="button" onclick="toggleLoginPassword()" class="absolute inset-y-0 right-0 flex items-center justify-center px-4 text-slate-400 hover:text-emerald-600 transition" aria-label="Show password">
+                                    <i id="login-password-toggle-icon" data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="login-error" class="hidden rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-500"></div>
+                        <button id="login-submit-btn" type="button" onclick="submitLogin()" class="w-full rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-4 py-4 text-[15px] font-extrabold text-white shadow-sm flex items-center justify-center gap-2 transition mt-1">
+                            <i data-lucide="log-in" class="w-5 h-5"></i> Login
+                        </button>
+                        
+                        <div id="forgot-password-container" class="mt-4 text-center hidden">
+                            <button type="button" onclick="showForgotFields(true)" class="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition">
+                                Forgot Password?
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Forgot Password Fields -->
+                    <div id="login-forgot-fields" class="space-y-4 hidden animate-in fade-in duration-200">
+                        <div id="forgot-inputs-wrapper" class="space-y-4">
+                            <div>
+                                <label class="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5 text-emerald-500"></i> Admin Email
+                                </label>
+                                <input id="login-forgot-email" type="email" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-medium outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition" placeholder="Enter Admin Email">
+                            </div>
+                            <button id="forgot-submit-btn" type="button" onclick="submitForgotPassword()" class="w-full rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-4 py-4 text-[15px] font-extrabold text-white shadow-sm flex items-center justify-center gap-2 transition mt-1">
+                                Next <i class="fa-solid fa-arrow-right text-sm"></i>
+                            </button>
+                            
+                            <div class="mt-4 text-center">
+                                <button type="button" onclick="showForgotFields(false)" class="text-sm font-semibold text-slate-500 hover:text-slate-700 transition">
+                                    Back to Login
+                                </button>
+                            </div>
+                        </div>
+                        <div id="forgot-error" class="hidden rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-500"></div>
+                        <div id="forgot-success" class="hidden rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700"></div>
+                        <div id="forgot-timer-msg" class="hidden text-xs font-bold text-slate-500 text-center mt-2"></div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="mt-5 relative w-full pb-2 flex flex-col items-center justify-center">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-id-card text-emerald-600 text-[13px]"></i>
+                        <span class="text-[12px] font-black tracking-widest text-emerald-600">IDentify</span>
+                    </div>
+                    <div class="text-[10px] font-bold tracking-widest text-slate-500 uppercase mt-0.5 flex items-center justify-center gap-1.5">
+                        <span>By: Javed Ansari</span>
+                        <span class="text-slate-300">|</span>
+                        <a href="tel:7999565002" class="text-slate-600 hover:text-emerald-600 transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-phone text-[9px]"></i> 7999565002
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        const AUTH_USER_KEY = 'student_auth_v1';
+        const CONFIG_KEY = 'school_config_v1';
+        const DEFAULT_CONFIG = { name: "Delhi Public School", code: "DPS", about: "ID Card Management Software", logo: "" };
+        let schoolConfig = { ...DEFAULT_CONFIG };
+        let currentUser = null;
+        let forgotPasswordTimer = null;
+        let adminFailedAttempts = 0;
+
+        function loadSchoolConfig() {
+            try {
+                const raw = localStorage.getItem(CONFIG_KEY);
+                if (raw) return JSON.parse(raw);
+            } catch (e) {}
+            return DEFAULT_CONFIG;
+        }
+
+        function loadAuthUser() {
+            try {
+                const raw = localStorage.getItem(AUTH_USER_KEY);
+                if (raw) return JSON.parse(raw);
+            } catch (e) {}
+            return null;
+        }
+
+        function saveAuthUser(user) {
+            currentUser = user || null;
+            if (user) {
+                localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+                localStorage.setItem('last_active_time', Date.now());
+            } else {
+                localStorage.removeItem(AUTH_USER_KEY);
+                localStorage.removeItem('last_active_time');
+            }
+        }
+
+        function xorCipher(str, key = 'IdentifySecretKey') {
+            let res = '';
+            for (let i = 0; i < str.length; i++) {
+                res += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+            }
+            return res;
+        }
+
+        function decryptLocal(str) {
+            try {
+                return xorCipher(atob(str));
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function toggleLoginPassword() {
+            const input = document.getElementById('login-password');
+            const icon = document.getElementById('login-password-toggle-icon');
+            if (input && icon) {
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                icon.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        }
+
+        function showForgotFields(show) {
+            const normalFields = document.getElementById('login-normal-fields');
+            const forgotFields = document.getElementById('login-forgot-fields');
+            const normalError = document.getElementById('login-error');
+            const forgotError = document.getElementById('forgot-error');
+            const forgotSuccess = document.getElementById('forgot-success');
+            const inputsWrapper = document.getElementById('forgot-inputs-wrapper');
+            const timerMsgEl = document.getElementById('forgot-timer-msg');
+
+            if (forgotPasswordTimer) {
+                clearInterval(forgotPasswordTimer);
+                forgotPasswordTimer = null;
+            }
+
+            if (normalError) normalError.classList.add('hidden');
+            if (forgotError) forgotError.classList.add('hidden');
+            if (forgotSuccess) forgotSuccess.classList.add('hidden');
+            if (timerMsgEl) timerMsgEl.classList.add('hidden');
+
+            if (show) {
+                normalFields.classList.add('hidden');
+                forgotFields.classList.remove('hidden');
+                if (inputsWrapper) inputsWrapper.classList.remove('hidden');
+            } else {
+                normalFields.classList.remove('hidden');
+                forgotFields.classList.add('hidden');
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        async function submitForgotPassword() {
+            const emailInput = document.getElementById('login-forgot-email');
+            const errorEl = document.getElementById('forgot-error');
+            const successEl = document.getElementById('forgot-success');
+            const btn = document.getElementById('forgot-submit-btn');
+            const inputsWrapper = document.getElementById('forgot-inputs-wrapper');
+            const timerMsgEl = document.getElementById('forgot-timer-msg');
+
+            if (errorEl) errorEl.classList.add('hidden');
+            if (successEl) successEl.classList.add('hidden');
+            if (timerMsgEl) timerMsgEl.classList.add('hidden');
+
+            const email = (emailInput ? emailInput.value : '').trim();
+            if (!email) {
+                if (errorEl) {
+                    errorEl.innerText = "Please enter your Email Address.";
+                    errorEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin w-5 h-5 flex items-center justify-center"></i> Sending...';
+            }
+
+            try {
+                await window.firebaseAPI.sendPasswordResetEmail(window.auth, email);
+                if (inputsWrapper) inputsWrapper.classList.add('hidden');
+                if (successEl) {
+                    successEl.innerText = "Reset link has been sent to your email. Check inbox.";
+                    successEl.classList.remove('hidden');
+                }
+                if (emailInput) emailInput.value = '';
+
+                if (timerMsgEl) {
+                    timerMsgEl.classList.remove('hidden');
+                    let timeLeft = 6;
+                    timerMsgEl.innerText = `Returning to login page in ${timeLeft} seconds...`;
+                    
+                    forgotPasswordTimer = setInterval(() => {
+                        timeLeft--;
+                        if (timeLeft <= 0) {
+                            clearInterval(forgotPasswordTimer);
+                            showForgotFields(false);
+                        } else {
+                            timerMsgEl.innerText = `Returning to login page in ${timeLeft} seconds...`;
+                        }
+                    }, 1000);
+                }
+            } catch (error) {
+                let errMsg = error.message;
+                if (error.code === 'auth/invalid-email') {
+                    errMsg = "The email address is invalid.";
+                } else if (error.code === 'auth/user-not-found') {
+                    errMsg = "No account found with this email.";
+                }
+                if (errorEl) {
+                    errorEl.innerText = errMsg;
+                    errorEl.classList.remove('hidden');
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Next <i class="fa-solid fa-arrow-right text-sm"></i>';
+                }
+            }
+        }
+
+        async function fetchSystemConfigFromFirebase() {
+            try {
+                if (!window.firebaseAPI || !window.db) return;
+                const docRef = window.firebaseAPI.doc(window.db, "system", "schoolConfig");
+                const docSnap = await window.firebaseAPI.getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    schoolConfig = { ...DEFAULT_CONFIG, ...data };
+                    localStorage.setItem(CONFIG_KEY, JSON.stringify(schoolConfig));
+                    updateBrandingUI();
+                }
+            } catch (e) {
+                console.error("Failed to fetch config from Firebase", e);
+            }
+        }
+
+        function updateBrandingUI() {
+            const el = document.getElementById('login-school-name');
+            if (el) el.innerText = schoolConfig.name;
+            if (schoolConfig.logo) {
+                const loginLogo = document.getElementById('login-logo-container');
+                if (loginLogo) loginLogo.innerHTML = `<img src="${schoolConfig.logo}" class="w-full h-full object-cover">`;
+            }
+        }
+
+        async function submitLogin() {
+            const userId = (document.getElementById('login-user-id').value || '').trim();
+            const password = (document.getElementById('login-password').value || '').trim();
+            const errorEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-submit-btn');
+            if (errorEl) errorEl.classList.add('hidden');
+            
+
+            
+            if (!userId) {
+                if (errorEl) {
+                    errorEl.innerText = "Please enter your Email/User ID.";
+                    errorEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin w-5 h-5 flex items-center justify-center"></i> Authenticating...';
+            }
+            
+            try {
+                if (!password) {
+                    throw new Error("Password is required for email login.");
+                }
+
+                if (window.db && window.firebaseAPI) {
+                    try {
+                        await fetchSystemConfigFromFirebase();
+                    } catch (e) {}
+                }
+
+                let authUser = null;
+                const userCredential = await window.firebaseAPI.signInWithEmailAndPassword(window.auth, userId, password);
+                const user = userCredential.user;
+                
+                if (user.email && (user.email.toLowerCase().includes('admin') || user.email.toLowerCase() === 'identify.jvd@gmail.com')) {
+                    authUser = { userId: 'admin', name: 'Admin', role: 'teacher', viewMode: 'all', email: user.email };
+                } else {
+                    authUser = { userId: user.uid, name: (user.email ? user.email.split('@')[0] : 'School User'), role: 'school', email: user.email };
+                }
+
+                saveAuthUser(authUser);
+                
+                // Redirect user based on role
+                if (authUser.userId === 'admin') {
+                    window.location.replace('Admin_Panel.html');
+                } else {
+                    window.location.replace('School_Panel.html');
+                }
+            } catch (error) {
+                if (errorEl) {
+                    let errMsg = "Authentication failed. Please check your credentials.";
+                    if (error.code === 'auth/invalid-email') errMsg = "The email address you entered is not valid.";
+                    else if (error.code === 'auth/user-not-found') errMsg = "We couldn't find an account matching this email.";
+                    else if (error.code === 'auth/wrong-password') errMsg = "The password you entered is incorrect. Please try again.";
+                    else if (error.code === 'auth/invalid-credential') errMsg = "Invalid email or password. Please try again.";
+                    else if (error.code === 'auth/user-disabled') errMsg = "This account has been temporarily disabled.";
+                    else if (error.code === 'auth/too-many-requests') errMsg = "Too many failed attempts. Please reset your password or try again later.";
+                    else if (error.code === 'auth/network-request-failed') errMsg = "Network error. Please check your internet connection.";
+                    
+                    errorEl.innerText = errMsg;
+                    errorEl.classList.remove('hidden');
+                }
+                adminFailedAttempts++;
+                if (adminFailedAttempts >= 2) {
+                    const forgotContainer = document.getElementById('forgot-password-container');
+                    if (forgotContainer) forgotContainer.classList.remove('hidden');
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="log-in" class="w-5 h-5"></i> Login';
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
+            }
+        }
+
+        function init() {
+            try {
+                schoolConfig = loadSchoolConfig();
+                updateBrandingUI();
+                
+                currentUser = loadAuthUser();
+                if (currentUser) {
+                    if (currentUser.userId === 'admin') {
+                        window.location.replace('Admin_Panel.html');
+                    } else {
+                        window.location.replace('School_Panel.html');
+                    }
+                    return;
+                }
+
+                // Check for session expired parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const msg = urlParams.get('msg');
+                if (msg === 'session_expired') {
+                    const errorEl = document.getElementById('login-error');
+                    if (errorEl) {
+                        errorEl.innerText = 'Session expired due to inactivity.';
+                        errorEl.classList.remove('hidden');
+                    }
+                }
+
+                // Hide splash screen after delay, or instantly if logged out / session expired
+                const splash = document.getElementById('initial-splash-screen');
+                if (splash) {
+                    if (msg === 'logout' || msg === 'session_expired') {
+                        splash.style.opacity = '0';
+                        splash.remove();
+                    } else {
+                        setTimeout(() => {
+                            splash.style.opacity = '0';
+                            setTimeout(() => splash.remove(), 500);
+                        }, 2500);
+                    }
+                }
+
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                
+                // Fetch config to check if it changed
+                setTimeout(() => {
+                    fetchSystemConfigFromFirebase();
+                }, 100);
+            } catch (e) {
+                console.error("Init error:", e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+
+            // Mobile keyboard layout fix
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) {
+                const loginCard = document.getElementById('login-card');
+                const inputs = overlay.querySelectorAll('input');
+                let blurTimeout = null;
+                
+                if (loginCard && inputs.length > 0) {
+                    inputs.forEach(input => {
+                        input.addEventListener('focus', () => {
+                            if (blurTimeout) {
+                                clearTimeout(blurTimeout);
+                                blurTimeout = null;
+                            }
+                            if (window.innerWidth < 640) {
+                                setTimeout(() => {
+                                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }, 300);
+                            }
+                        });
+                        input.addEventListener('blur', () => {
+                            if (input.type === 'email') {
+                                let val = input.value.trim();
+                                if (val && !val.includes('@')) {
+                                    input.value = val + '@gmail.com';
+                                }
+                            }
+                            blurTimeout = setTimeout(() => {
+                                // Reset any page/overlay scroll shifts caused by the mobile keyboard
+                                overlay.scrollTop = 0;
+                                window.scrollTo(0, 0);
+                                document.body.scrollTop = 0;
+                            }, 100);
+                        });
+                    });
+                }
+            }
+        });
+
+        // Fallback: Forcefully remove splash screen after 4 seconds just in case of JS failure
+        setTimeout(() => {
+            const splash = document.getElementById('initial-splash-screen');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 500);
+            }
+        }, 4000);
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.log('Service Worker registration failed:', err);
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>
