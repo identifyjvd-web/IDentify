@@ -77,28 +77,49 @@ const SchoolLocalDB = {
                 req.onerror = () => reject(req.error);
             });
         } catch(e) { return []; }
+    },
+    clearQueue: async function() {
+        try {
+            const idb = await this.init();
+            return await new Promise((resolve, reject) => {
+                const tx = idb.transaction('syncQueue', 'readwrite');
+                const store = tx.objectStore('syncQueue');
+                const req = store.clear();
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        } catch(e) {}
     }
 };
 
 window.addEventListener('online', async () => {
     const queue = await SchoolLocalDB.getAllSyncQueue();
-    if (queue.length > 0) {
+    const syncableQueue = queue.filter(item => item.status === 'Verified' || item.status === 'Deleted');
+    const droppedQueue = queue.filter(item => item.status === 'Draft' || item.status === 'Imported');
+
+    // Remove non-syncable items from the offline queue silently
+    for (const item of droppedQueue) {
+        await SchoolLocalDB.dequeueSync(item.id);
+    }
+
+    if (syncableQueue.length > 0) {
         if (typeof showToast === 'function') {
-            showToast('<span class="material-symbols-outlined mr-2">cloud_upload</span> Syncing ' + queue.length + ' offline records...');
+            showToast('<span class="material-symbols-outlined mr-2">cloud_upload</span> Syncing ' + syncableQueue.length + ' offline records...');
         }
-        for (const item of queue) {
+        for (const item of syncableQueue) {
             serverCallSilent(item.fn, [item.data], async () => {
                 await SchoolLocalDB.dequeueSync(item.id);
                 if (typeof db !== 'undefined' && Array.isArray(db)) {
                     const idx = db.findIndex(x => x.id === item.id);
                     if (idx > -1) {
                         db[idx]._syncStatus = 'synced';
-                        if (typeof currentTab !== 'undefined' && currentTab === 'records' && typeof renderCurrentRecordsPage === 'function') {
-                            renderCurrentRecordsPage();
-                        }
+                        if (typeof renderCurrentRecordsPage === 'function') renderCurrentRecordsPage();
                     }
                 }
-            });
+            }, () => {});
+        }
+        if (typeof showToast === 'function') {
+            setTimeout(() => showToast('Offline sync completed!'), 2000);
         }
     }
 });
@@ -131,25 +152,53 @@ function serverCall(fn, args, onSuccess, onFailure) {
 }
 
 function serverCallSilent(fn, args, onSuccess, onFailure) {
-    if (!navigator.onLine && (fn === 'updateRecord' || fn === 'submitStudentData' || fn === 'addRecord' || fn === 'deleteRecord')) {
-        const rec = args[0];
-        if (rec && rec.id) {
-            SchoolLocalDB.enqueueSync({ id: rec.id, fn: fn, data: rec, timestamp: Date.now() });
-            if (onSuccess) onSuccess(rec);
-            return;
-        }
-    }
-    serverCall(fn, args, onSuccess, (err) => {
-        if (fn === 'updateRecord' || fn === 'submitStudentData' || fn === 'addRecord' || fn === 'deleteRecord') {
-            const rec = args[0];
-            if (rec && rec.id) {
-                SchoolLocalDB.enqueueSync({ id: rec.id, fn: fn, data: rec, timestamp: Date.now() });
-                if (onSuccess) onSuccess(rec);
-                return;
+    const isOffline = !navigator.onLine;
+    const isSyncableFn = (fn === 'updateRecord' || fn === 'submitStudentData' || fn === 'addRecord' || fn === 'deleteRecord');
+
+    if (isSyncableFn) {
+        let recId = null;
+        let recData = null;
+        let status = 'Draft';
+
+        if (fn === 'deleteRecord') {
+            recId = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].id ? args[0].id : null);
+            recData = args[0]; // Can be ID or object, backend handles both
+            status = 'Deleted';
+        } else {
+            recData = args[0];
+            if (recData && recData.id) {
+                recId = recData.id;
+                if (recData.verified === true || String(recData.verified).toLowerCase() === 'true' || recData.verified === 'Completed' || recData._serverSaved) {
+                    status = 'Verified';
+                } else if (String(recId).startsWith('draft_')) {
+                    status = 'Draft';
+                } else if (String(recId).startsWith('TEMP_')) {
+                    status = 'Imported';
+                } else {
+                    status = 'Imported'; // Fallback for unverified non-draft
+                }
             }
         }
-        if (onFailure) onFailure(err);
-    });
+
+        const handleOfflineEnqueue = () => {
+            if (recId) {
+                SchoolLocalDB.enqueueSync({ id: recId, fn: fn, data: recData, timestamp: Date.now(), status: status });
+            }
+        };
+
+        if (isOffline) {
+            handleOfflineEnqueue();
+            if (onSuccess) onSuccess(recData);
+            return;
+        }
+
+        serverCall(fn, args, onSuccess, (err) => {
+            handleOfflineEnqueue(); // Re-enqueue on failure
+            if (onSuccess) onSuccess(recData); // Fail gracefully
+        });
+    } else {
+        serverCall(fn, args, onSuccess, onFailure);
+    }
 }
 
 async function handleFirebaseCall(fn, args, onSuccess, onFailure) {
@@ -171,32 +220,17 @@ async function handleFirebaseCall(fn, args, onSuccess, onFailure) {
             const data = args[0];
             data.updatedAt = Date.now();
             const cleanData = JSON.parse(JSON.stringify(data));
-            if (cleanData.id && !String(cleanData.id).startsWith('draft_') && !String(cleanData.id).startsWith('TEMP_')) {
-                const docRef = doc(window.db, "records", String(cleanData.id));
-                await setDoc(docRef, cleanData);
-                if (onSuccess) onSuccess(data);
-            } else {
-                const docRef = await addDoc(collection(window.db, "records"), cleanData);
-                data.id = docRef.id;
-                if (onSuccess) onSuccess(data);
-            }
+            
+            // Always use the local ID (e.g. draft_xxx or UUID) as the permanent Firebase Document ID
+            const docRef = doc(window.db, "records", String(cleanData.id));
+            await setDoc(docRef, cleanData);
+            if (onSuccess) onSuccess(data);
         } else if (fn === 'updateStudentData' || fn === 'updateRecord') {
             const data = args[0];
             data.updatedAt = Date.now();
             const cleanData = JSON.parse(JSON.stringify(data));
             const docRef = doc(window.db, "records", String(cleanData.id));
             await setDoc(docRef, cleanData, { merge: true });
-            
-            // Delete old document from Firebase if the ID changed (e.g. from draft_ to serial-numbered ID)
-            if (data.oldId && String(data.oldId) !== String(data.id)) {
-                try {
-                    const oldDocRef = doc(window.db, "records", String(data.oldId));
-                    await deleteDoc(oldDocRef);
-                    console.log("Deleted old draft document from Firebase:", data.oldId);
-                } catch(e) {
-                    console.warn("Failed to delete old draft document from Firebase:", e);
-                }
-            }
             
             if (onSuccess) onSuccess(data);
         } else if (fn === 'permanentDelete' || fn === 'deleteRecord') {
@@ -207,26 +241,15 @@ async function handleFirebaseCall(fn, args, onSuccess, onFailure) {
         } else if (fn === 'deleteAllRecords') {
             const q = query(collection(window.db, "records"));
             const querySnapshot = await getDocs(q);
-            const docs = querySnapshot.docs;
-            const chunkSize = 100;
-            for (let i = 0; i < docs.length; i += chunkSize) {
-                const chunk = docs.slice(i, i + chunkSize);
-                await Promise.all(chunk.map(d => deleteDoc(d.ref)));
-            }
-
-            // Also clear activityLogs
-            try {
-                const logsQ = query(collection(window.db, "activityLogs"));
-                const logsSnapshot = await getDocs(logsQ);
-                const logDocs = logsSnapshot.docs;
-                for (let i = 0; i < logDocs.length; i += chunkSize) {
-                    const chunk = logDocs.slice(i, i + chunkSize);
-                    await Promise.all(chunk.map(d => deleteDoc(d.ref)));
-                }
-            } catch (e) {
-                console.warn('Could not clear activityLogs', e);
-            }
-
+            const promises = [];
+            querySnapshot.forEach((document) => {
+                promises.push(deleteDoc(doc(window.db, "records", document.id)));
+            });
+            // Reset SN counter to 0
+            const counterRef = doc(window.db, "config", "snCounter");
+            promises.push(setDoc(counterRef, { value: 0 }));
+            
+            await Promise.all(promises);
             if (onSuccess) onSuccess(true);
         } else if (fn === 'saveFormFields') {
             const data = args[0];
